@@ -36,9 +36,9 @@
 " If you want vim to only check for changes to that buffer while editing the buffer
 " that is being watched, use WatchForChangesWhileInThisBuffer instead.
 "
-command! -bang WatchForChanges                  :call watch_for_changes#WatchForChanges(@%,  {'toggle': 1, 'autoread': <bang>0})
-command! -bang WatchForChangesWhileInThisBuffer :call watch_for_changes#WatchForChanges(@%,  {'toggle': 1, 'autoread': <bang>0, 'while_in_this_buffer_only': 1})
-command! -bang WatchForChangesAllFile           :call watch_for_changes#WatchForChanges('*', {'toggle': 1, 'autoread': <bang>0})
+command! -bang WatchForChanges                  :call vim_file_system_watcher#WatchForChanges(@%,  {'toggle': 1, 'autoread': <bang>0})
+command! -bang WatchForChangesWhileInThisBuffer :call vim_file_system_watcher#WatchForChanges(@%,  {'toggle': 1, 'autoread': <bang>0, 'while_in_this_buffer_only': 1})
+command! -bang WatchForChangesAllFile           :call vim_file_system_watcher#WatchForChanges('*', {'toggle': 1, 'autoread': <bang>0})
 " WatchForChanges function
 "
 " This is used by the WatchForChanges* commands, but it can also be
@@ -66,7 +66,7 @@ command! -bang WatchForChangesAllFile           :call watch_for_changes#WatchFor
 "     listed above. Set to 0 to not create autocommands for CursorMoved, CursorMovedI,
 "     (Presumably, having too much going on for those events could slow things down,
 "     since they are triggered so frequently...)
-function! watch_for_changes#WatchForChanges(bufname, ...)
+function! vim_file_system_watcher#WatchForChanges(bufname, ...)
   " Figure out which options are in effect
   if a:bufname == '*'
     let id = 'WatchForChanges'.'AnyBuffer'
@@ -119,13 +119,13 @@ function! watch_for_changes#WatchForChanges(bufname, ...)
     end
     silent! exec 'augroup '.id
       if a:bufname != '*'
-        "exec "au BufDelete    ".a:bufname . " :silent! au! ".id . " | silent! augroup! ".id
-        "exec "au BufDelete    ".a:bufname . " :echomsg 'Removing autocommands for ".id."' | au! ".id . " | augroup! ".id
         exec "au BufDelete    ".a:bufname . " execute 'au! ".id."' | execute 'augroup! ".id."'"
       end
-        exec "au BufEnter     ".event_bufspec . " :checktime ".bufspec
-        exec "au CursorHold   ".event_bufspec . " :checktime ".bufspec
-        exec "au CursorHoldI  ".event_bufspec . " :checktime ".bufspec
+        execute "autocmd User FileChangedExternally " . event_bufspec . " :checktime " . bufspec
+        execute "autocmd User BufEnter " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd User CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd User CursorHoldI " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+
       " The following events might slow things down so we provide a way to disable them...
       " vim docs warn:
       "   Careful: Don't do anything that the user does
