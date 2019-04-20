@@ -1,5 +1,3 @@
-autocmd User FileChangedExternallyPre doautocmd User FileChangedExternally
-
 " Requires watch_for_changes.vim in autoload
 " Enables auto-file read on console-vim
 " Also works with webserver updates(!)

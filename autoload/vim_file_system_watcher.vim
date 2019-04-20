@@ -121,18 +121,21 @@ function! vim_file_system_watcher#WatchForChanges(bufname, ...)
       if a:bufname != '*'
         exec "au BufDelete    ".a:bufname . " execute 'au! ".id."' | execute 'augroup! ".id."'"
       end
-        execute "autocmd User FileChangedExternally " . event_bufspec . " :checktime " . bufspec
-        execute "autocmd User BufEnter " . event_bufspec . " doautocmd User FileChangedExternallyPre"
-        execute "autocmd User CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyPre"
-        execute "autocmd User CursorHoldI " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd User FileChangedExternally :checktime " . bufspec
+        autocmd User FileChangedExternallyPre doautocmd User FileChangedExternally
+
+        execute "autocmd BufEnter " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd CursorHoldI " . event_bufspec . " doautocmd User FileChangedExternallyPre"
 
       " The following events might slow things down so we provide a way to disable them...
       " vim docs warn:
       "   Careful: Don't do anything that the user does
       "   not expect or that is slow.
       if more_events
-        exec "au CursorMoved  ".event_bufspec . " :checktime ".bufspec
-        exec "au CursorMovedI ".event_bufspec . " :checktime ".bufspec
+        exec "au CursorMoved  " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        exec "au CursorMovedI " . event_bufspec . " doautocmd User FileChangedExternallyPre"
       end
     augroup END
     let msg = msg . 'Now watching ' . bufspec . ' for external updates...'
