@@ -122,20 +122,23 @@ function! vim_file_system_watcher#WatchForChanges(bufname, ...)
         exec "au BufDelete    ".a:bufname . " execute 'au! ".id."' | execute 'augroup! ".id."'"
       end
         execute "autocmd User FileChangedExternally :checktime " . bufspec
+        autocmd User FileChangedExternallyCheck call CheckForChanges()
+        autocmd User FileChangedShellPost call UpdateInternalTime()
         autocmd User FileChangedExternallyPre doautocmd User FileChangedExternally
+        autocmd BufWrite * unlet b:cached_last_modified_time
 
-        execute "autocmd BufEnter " . event_bufspec . " doautocmd User FileChangedExternallyPre"
-        execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyPre"
-        execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyPre"
-        execute "autocmd CursorHoldI " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        execute "autocmd BufEnter " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
+        execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
+        execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
+        execute "autocmd CursorHoldI " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
 
       " The following events might slow things down so we provide a way to disable them...
       " vim docs warn:
       "   Careful: Don't do anything that the user does
       "   not expect or that is slow.
       if more_events
-        exec "au CursorMoved  " . event_bufspec . " doautocmd User FileChangedExternallyPre"
-        exec "au CursorMovedI " . event_bufspec . " doautocmd User FileChangedExternallyPre"
+        exec "au CursorMoved  " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
+        exec "au CursorMovedI " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
       end
     augroup END
     let msg = msg . 'Now watching ' . bufspec . ' for external updates...'
@@ -162,4 +165,31 @@ function! vim_file_system_watcher#WatchForChanges(bufname, ...)
   end
   silent! echo msg
   let @"=reg_saved
+endfunction
+
+
+function! UpdateInternalTime(...)
+    if !exists('a:1')
+        let l:time = str2nr(getftime(expand('%:p')))
+    else
+        let l:time = a:1
+    endif
+
+    let b:cached_last_modified_time = l:time
+endfunction
+
+
+function! CheckForChanges()
+    if !exists('b:cached_last_modified_time')
+        call UpdateInternalTime()
+        return
+    endif
+
+    let l:last_modified_time = str2nr(getftime(expand('%:p')))
+
+    if l:last_modified_time > b:cached_last_modified_time
+        " If this happens then it means that the file was changed externally
+        doautocmd User FileChangedExternallyPre
+        call UpdateInternalTime(l:last_modified_time)
+    endif
 endfunction
