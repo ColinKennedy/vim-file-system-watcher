@@ -122,10 +122,10 @@ function! vim_file_system_watcher#WatchForChanges(bufname, ...)
         exec "au BufDelete    ".a:bufname . " execute 'au! ".id."' | execute 'augroup! ".id."'"
       end
         execute "autocmd User FileChangedExternally :checktime " . bufspec
-        autocmd User FileChangedExternallyCheck call CheckForChanges()
-        autocmd User FileChangedShellPost call UpdateInternalTime()
+        autocmd User FileChangedExternallyCheck call s:CheckForChanges()
+        autocmd User FileChangedShellPost call s:UpdateInternalTime()
         autocmd User FileChangedExternallyPre doautocmd User FileChangedExternally
-        autocmd BufWrite * unlet b:cached_last_modified_time
+        autocmd BufWrite * call s:ClearCachedTime()
 
         execute "autocmd BufEnter " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
         execute "autocmd CursorHold " . event_bufspec . " doautocmd User FileChangedExternallyCheck"
@@ -168,20 +168,16 @@ function! vim_file_system_watcher#WatchForChanges(bufname, ...)
 endfunction
 
 
-function! UpdateInternalTime(...)
-    if !exists('a:1')
-        let l:time = str2nr(getftime(expand('%:p')))
-    else
-        let l:time = a:1
+function! s:ClearCachedTime()
+    if exists('b:cached_last_modified_time')
+        unlet b:cached_last_modified_time
     endif
-
-    let b:cached_last_modified_time = l:time
 endfunction
 
 
-function! CheckForChanges()
+function! s:CheckForChanges()
     if !exists('b:cached_last_modified_time')
-        call UpdateInternalTime()
+        call s:UpdateInternalTime()
         return
     endif
 
@@ -190,6 +186,17 @@ function! CheckForChanges()
     if l:last_modified_time > b:cached_last_modified_time
         " If this happens then it means that the file was changed externally
         doautocmd User FileChangedExternallyPre
-        call UpdateInternalTime(l:last_modified_time)
+        call s:UpdateInternalTime(l:last_modified_time)
     endif
+endfunction
+
+
+function! s:UpdateInternalTime(...)
+    if !exists('a:1')
+        let l:time = str2nr(getftime(expand('%:p')))
+    else
+        let l:time = a:1
+    endif
+
+    let b:cached_last_modified_time = l:time
 endfunction
